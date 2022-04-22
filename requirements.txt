@@ -1,10 +1,10 @@
+python===3.8.13
 dash==2.1.0
 dash_bootstrap_components==1.1.0
 dash_leaflet
 numpy
 sympy
 pandas
-matplotlib.pyplot
 plotly 
 plotly.express
 
