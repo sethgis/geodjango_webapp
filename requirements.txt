@@ -1,6 +1,4 @@
-dash==2.1.0
-dash_bootstrap_components==1.1.0
-dash_leaflet==0.1.23
+pip3 freeze > requirements.txt  # Python3
 
 
 
