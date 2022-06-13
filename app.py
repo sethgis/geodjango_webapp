@@ -12,7 +12,7 @@ import os
 import geemap
 dir = os.path.dirname(__file__) or "."
 ppk_file = os.path.join(dir, "ppk.json")
-service_account = 'seth-311@seth-1568964691342.iam.gserviceaccount.com'
+service_account = ''
 # service_account_privatekey = 'seth-1568964691342-85f5ab32f561.json'
 # print(service_account_privatekey)
 credentials = ee.ServiceAccountCredentials(service_account, ppk_file)
