@@ -1,46 +1,66 @@
-from logging import PlaceHolder
 import dash
 import dash_bootstrap_components as dbc
 from dash import html
 from dash import dcc
 import dash_leaflet as dl
 from dash import Input, Output
-from numpy import true_divide
-from sympy import false, true
-import pandas as pd
-import matplotlib.pyplot as plt
-import plotly 
-import plotly.express as px
-import seaborn as sns
-import plotly.graph_objs as go
+import folium
 
 
-# ee.Initialize()
-# PANDAS DATAFRAME
-
-ILSWE = [['Very High',7665],['High',10912],['Moderate',8389],['Low',8722],['Very Low',17336]]
-ilswe_df = pd.DataFrame(ILSWE, columns = ['Class', 'Area SQKM'])
-CE = [['Very High',10475],['High',10629],['Moderate',10622],['Low',10829],['Very Low',10616]]
-ce_df = pd.DataFrame(CE, columns = ['Class', 'Area SQKM'])
-EF = [['Very High',10718],['High',10526],['Moderate',10867],['Low',10528],['Very Low',10397]]
-ef_df = pd.DataFrame(EF, columns = ['Class', 'Area SQKM'])
-SC = [['Very High',7665],['High',10912],['Moderate',8389],['Low',8722],['Very Low',17336]]
-sc_df = pd.DataFrame(SC, columns = ['Class', 'Area SQKM'])
-VC = [['Very High',10514],['High',10548],['Moderate',10894],['Low',10560],['Very Low',10594]]
-vc_df = pd.DataFrame(VC, columns = ['Class', 'Area SQKM'])
-SR = [['Very High',0],['High',30980],['Moderate',6244],['Low',15715],['Very Low',277]]
-sr_df = pd.DataFrame(SR, columns = ['Class', 'Area SQKM'])
-
-
-# fig = px.bar(ilswe_df, x='Class', y='Area SQKM')
-
+import ee
+import os
+import geemap
+dir = os.path.dirname(__file__) or "."
+ppk_file = os.path.join(dir, "ppk.json")
+service_account = 'seth-311@seth-1568964691342.iam.gserviceaccount.com'
+# service_account_privatekey = 'seth-1568964691342-85f5ab32f561.json'
+# print(service_account_privatekey)
+credentials = ee.ServiceAccountCredentials(service_account, ppk_file)
+ee.Initialize(credentials)
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 
+dataset = ee.ImageCollection('MODIS/006/MOD13Q1').filter(ee.Filter.date('2020-07-01', '2020-11-30')).first()
+table = ee.FeatureCollection('users/snyawacha/LASWE_BOUNDARY_SYMMETRICAL_DIFFERENCE')
+table = ee.FeatureCollection("users/snyawacha/LASWE_BOUNDARY_SYMMETRICAL_DIFFERENCE").geometry()
+modisndvi = dataset.select('NDVI').clip(table)
+# print(modisndvi)
+visParams = {'min':0, 'max':3000, 'palette':['225ea8','41b6c4','a1dab4','034B48']}
+vis_paramsNDVI = {
+            'min': 0,
+            'max': 9000,
+            'palette': [ 'FE8374', 'C0E5DE', '3A837C','034B48',]}
+# print(table)
+# Image.getThumbURL(params, callback)
+image_url = modisndvi.getThumbURL({
+    'min': 0, 'max': 9000, 'dimensions': 512, 'region': table,
+    'palette': [ 'FE8374', 'C0E5DE', '3A837C','034B48',]})
+# print(image_url)
+# type(image_url)
+src = modisndvi.getMapId(vis_paramsNDVI)["tile_fetcher"].url_format
+print(src)
+
+
+
+
+m = folium.Map(location=[60.25, 24.8],style={"top":1500,
+        "bottom":0,
+        "right":0,
+        "left":0,
+        "height": "95vh",
+        "order":1,
+        "z-index":"500",}, zoom_start=10, control_scale=True)
 PLOTLY_LOGO = "https://images.plot.ly/logo/new-branding/plotly-logomark.png"
 
-basemap = dl.Map(dl.TileLayer(), style={'width': '1000px', 'height': '500px'})
-
-
+basemap = folium.Map(TileLayer="Mapbox Bright", style={'width': '1000px', 'height': '500px'})
+map = folium.Map(location=[1.9577, 37.2972], zoom_start=5, TileLayer="Mapbox Bright", style={"top":1500,
+        "bottom":0,
+        "right":0,
+        "left":0,
+        "height": "95vh",
+        "order":1,
+        "z-index":"500",})
+far = folium.Figure(width=1000, height=1000)
+m=folium.Map(location=[1.9577, 37.2972], zoom_start=4).add_to(far)
 search_bar = dbc.Row(
     [
         dbc.Col(dbc.Input(type="search", placeholder="Search")),
@@ -79,11 +99,6 @@ navbar = dbc.Navbar(
     color="#032b0d",
     dark=True,)
 
-
-# url = 'https://services.nationalmap.gov/arcgis/services/USGSNAIPImagery/ImageServer/WMSServer?'
-# Map.add_wms_layer(url=url, layers='0', name='NAIP Imagery', format='image/png')
-# dl.WMSTileLayer(url = "https://services.nationalmap.gov/arcgis/services/USGSNAIPImagery/ImageServer/WMSServer?",
-#             layers="NLCD_Canopy",format="imgae/png",transparent=true,),
 
 access_token ="pk.eyJ1Ijoic2V0aG55YXdhY2hhIiwiYSI6ImNrdmk5NXJscTQzengycW9rdWN6azdpcjQifQ._AnDc8NPaSs5WMPhh9nvGA"  # settings.MAPBOX_TOKEN
 id = "mapbox://styles/mapbox/satellite-v9"
@@ -162,22 +177,24 @@ map =  html.Div(dl.Map(
            ),
 )
 
-# layers: "ldms:KEN_ADM10",
-#             "layer-type": "overlay",
-#             CQL_FILTER: "shapename = "+"'"+county+"'",
-#             format: "image/png",
-#             transparent: "true",
-#             opacity: 1,
+
+Map = geemap.Map()
+
+# Center the map and display the image.
+Map.centerObject(table)
+
+Map
 
 
-#####SIDEBAR BOOTSTRAP
+
+
 
 SIDEBAR_STYLE = {
 
     "position": "absolute",
-    "top": 650,
+    "top": 350,
     "left": 20,
-    "bottom":50,
+    "bottom":350,
     "height":200,
     "width": "16rem",
     "padding": "2rem 1rem",
@@ -216,27 +233,11 @@ sidebar = html.Div(
                 {"label": "Vegetation Sensitivity", "value": "VC"},
                 {"label": "Surface Roughness", "value": "SR"},
                 {"label": "ILSWE", "value": "ILSWE"},
-            ],
-            multi=False,
-            id="dropdown",
-            
-            
-        ),
+            ],id='dropdown'),
    html.Div(id='out'),
     ],
     style=SIDEBAR_STYLE,
 )
-
-sidebar2 = html.Div(
-      fig.show(),
-        # dcc.Graph (figure = {'data': }),
-    style=SIDEBAR_STYLE2,
-)
-# sidebar3 = html.Div(
-#     fig = go.Figure(data=[go.Scatter(x=[1,2,3], y=[4,1,2])])
-#     dcc.Graph(figure=fig),],
-#     # html.Div(id='output')
-# ], style = SIDEBAR_STYLE2]))
 
 
 
@@ -273,14 +274,11 @@ SIDEBAR_STYLE2 = {
 
 app.layout = html.Div([
 navbar,
-# map,
-base,
-
 sidebar,
-# sidebar2,
+base,
+# m,
+
 ],)
-
-
 
 @app.callback(
     Output('base','children'),
@@ -292,8 +290,17 @@ def update_value(value):
      dl.MeasureControl(position="topleft", primaryLengthUnit="kilometers", primaryAreaUnit="hectares",
                               activeColor="#214097", completedColor="#972158"), 
                               
-     dl.WMSTileLayer(url="http://45.76.249.64:8085/geoserver/ADS/wms?/",
-                                            layers="CE", format="image/png", transparent=True)],
+     dl.BaseLayer(
+                        dl.TileLayer(
+                            url=src,
+                            attribution="Google Earth Engine",
+                        ),
+                        name="NDVI",
+                        # layers='0',
+                        checked=False,
+                           
+                    ),
+                                            ],
            center=[0.0236, 37.9062], zoom=4,
            style= SIDEBAR_STYLE2,
            ), 
@@ -304,8 +311,8 @@ def update_value(value):
      dl.MeasureControl(position="topleft", primaryLengthUnit="kilometers", primaryAreaUnit="hectares",
                             activeColor="#214097", completedColor="#972158"),
                             
-     dl.WMSTileLayer(url="http://45.76.249.64:8085/geoserver/ADS/wms?/",
-                                            layers="EF", format="image/png", transparent=True)],
+     dl.WMSTileLayer(url="http://45.76.249.64:8085/geoserver/ADS/wms?",
+                                            layers="CE", format="image/png", transparent=True)],
         center=[0.0236, 37.9062], zoom=4,
         style= SIDEBAR_STYLE2,
     ),)
@@ -315,7 +322,7 @@ def update_value(value):
      dl.MeasureControl(position="topleft", primaryLengthUnit="kilometers", primaryAreaUnit="hectares",
                             activeColor="#214097", completedColor="#972158"),
                             
-     dl.WMSTileLayer(url="http://45.76.249.64:8085/geoserver/ADS/wms?/",
+     dl.WMSTileLayer(url="http://45.76.249.64:8080/geoserver/ADS/wms?/",
                                             layers="SC", format="image/png", transparent=True)],
         center=[0.0236, 37.9062], zoom=4,
         style= SIDEBAR_STYLE2,
@@ -368,12 +375,6 @@ def update_value(value):
 
 
 
-
-
-
 if __name__ == '__main__':
-    app.run_server(host='0.0.0.0', debug=True, port=8085)
-
-
-
+    app.run_server(host='0.0.0.0',debug=True)
 
